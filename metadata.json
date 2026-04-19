@@ -1,0 +1,8 @@
+{
+  "name": "ELMART",
+  "description": "A hybrid B2B/B2C marketplace connecting local artisans, manufacturers, and wholesalers with retailers and consumers in Rwanda.",
+  "requestFramePermissions": [
+    "geolocation"
+  ],
+  "majorCapabilities": []
+}
