@@ -1,3 +1,5 @@
+// ELMART Application: A robust hybrid marketplace connecting Rwandan artisans, retailers, and wholesalers.
+// Built with React, Tailwind CSS, and Framer Motion.
 import React, { useState, useEffect } from 'react';
 import { Search, ShoppingCart, User, BarChart3, Package, Layers, X, FileText, MessageCircle, ShieldCheck, UploadCloud, Play, Download, Plus, AlertTriangle, Lock } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -5,25 +7,96 @@ import { Product, UserRole, Order, Advertisement, VerificationStatus } from './t
 import { MOCK_PRODUCTS, MOCK_ORDERS, MOCK_ADS } from './mockData';
 
 export default function AppContent() {
+  /**
+   * NAVIGATION & VIEW STATE
+   * Manages the active view and global UI visibility.
+   */
   const [activeTab, setActiveTab] = useState<'marketplace' | 'dashboard' | 'product' | 'inventory' | 'logistics' | 'payments' | 'artisan' | 'ai-studio' | 'shop-manager' | 'retail' | 'documentation'>('marketplace');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [userRole, setUserRole] = useState<UserRole>('RETAIL_BUYER');
   const [cartCount, setCartCount] = useState(0);
+
+  /**
+   * AUTHENTICATION & VERIFICATION STATE
+   * Manages user roles, admin modes, and KYC/KYB status.
+   */
   const [hasSetupProfile, setHasSetupProfile] = useState(false);
   const [showSetupModal, setShowSetupModal] = useState(false);
-  
   const [showConsumerVerifyModal, setShowConsumerVerifyModal] = useState(false);
   const [consumerStatus, setConsumerStatus] = useState<VerificationStatus>('UNVERIFIED');
   const [supplierStatus, setSupplierStatus] = useState<VerificationStatus>('UNVERIFIED');
   const [isAdminMode, setIsAdminMode] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false); 
+  const [isLoggedIn, setIsLoggedIn] = useState(true); 
   const [isImpersonating, setIsImpersonating] = useState(false);
+
+  /**
+   * AI & MARKET INTELLIGENCE STATE
+   * Handles AI-driven features like ad generation and demand prediction.
+   */
+  const [isAiGenerating, setIsAiGenerating] = useState(false);
+  const [aiProgress, setAiProgress] = useState(0);
+  const [selectedLanguage, setSelectedLanguage] = useState('Kinyarwanda');
+  const [activeAdCampaign, setActiveAdCampaign] = useState<string | null>(null);
   const [stockAlertsEnabled, setStockAlertsEnabled] = useState(true);
+  const [demandPredictions] = useState([
+    { region: 'Northern (Musanze)', item: 'Organic Irish Potatoes', demand: 'EXCESSIVE', remarks: 'Clients complaining about price fluctuations in Kigali markets.', confidence: 94 },
+    { region: 'Kigali City', item: 'Inyange Whole Milk', demand: 'CRITICAL GAP', remarks: 'Frequent stock-outs reported in Nyarugenge convenience stores.', confidence: 89 },
+    { region: 'Eastern (Nyagatare)', item: 'Construction Cement', demand: 'HIGH', remarks: 'New infrastructure projects starting; buyers seeking bulk discounts.', confidence: 92 }
+  ]);
   const [demandLeads, setDemandLeads] = useState([
     { id: 1, buyer: 'Kigali Fresh Market', item: 'Inyange Whole Milk', volume: '1000 Liters', match: 92 },
     { id: 2, buyer: 'Hotel des Mille Collines', item: 'Traditional Agaseke', volume: '200 Units', match: 88 },
   ]);
 
+  const [products, setProducts] = useState<Product[]>(MOCK_PRODUCTS);
+  const [showAddProductModal, setShowAddProductModal] = useState(false);
+  const [newProduct, setNewProduct] = useState<Partial<Product>>({
+    name: '',
+    description: '',
+    price: 0,
+    category: 'Food',
+    images: ['https://picsum.photos/seed/newproduct/600/600'],
+    stock: 0,
+    rating: 5.0,
+    reviewsCount: 0,
+    supplierName: 'System Merchant',
+    isArtisan: false,
+    moq: 1
+  });
+
+  /**
+   * HANDLERS: PRODUCT MANAGEMENT
+   * Handles adding new entries to the local product catalog.
+   */
+  const handleAddProduct = () => {
+    if (!newProduct.name || !newProduct.price) return;
+    const product: Product = {
+      ...newProduct as Product,
+      id: `p${products.length + 1}`,
+      supplierId: 's_current',
+    };
+    setProducts([product, ...products]);
+    setShowAddProductModal(false);
+    setNewProduct({
+      name: '',
+      description: '',
+      price: 0,
+      category: 'Food',
+      images: ['https://picsum.photos/seed/newproduct/600/600'],
+      stock: 0,
+      rating: 5.0,
+      reviewsCount: 0,
+      supplierName: 'System Merchant',
+      isArtisan: false,
+      moq: 1
+    });
+  };
+
+  /**
+   * HANDLERS: USER ROLE MANAGEMENT
+   * Cycles through available user roles (Retail -> Wholesale -> Supplier).
+   * Also manages Admin impersonation logic.
+   */
   const toggleRole = () => {
     let nextRole: UserRole;
     if (userRole === 'RETAIL_BUYER') nextRole = 'WHOLESALE_BUYER';
@@ -46,6 +119,10 @@ export default function AppContent() {
     else setActiveTab('dashboard');
   };
 
+  /**
+   * HANDLERS: SYSTEM ADMIN LOGIN
+   * Toggles the powerful system admin view.
+   */
   const handleAdminLogin = () => {
     if (!isAdminMode) {
       setIsAdminMode(true);
@@ -60,15 +137,15 @@ export default function AppContent() {
     }
   };
 
-  if (!isLoggedIn) {
-     return <SecurityScreen onLogin={() => setIsLoggedIn(true)} />;
-  }
-
   const handleProductClick = (product: Product) => {
     setSelectedProduct(product);
     setActiveTab('product');
   };
 
+  /**
+   * NAVIGATION ITEMS
+   * Defines the sidebar structure and role-based permissions.
+   */
   const navItems = [
     { id: 'retail', label: 'Daily Deals', icon: <Layers className="w-4 h-4" />, roles: ['RETAIL_BUYER', 'WHOLESALE_BUYER', 'SUPPLIER', 'ADMIN'] },
     { id: 'marketplace', label: 'Wholesale Hub', icon: <Layers className="w-4 h-4" />, roles: ['RETAIL_BUYER', 'WHOLESALE_BUYER', 'SUPPLIER', 'ADMIN'] },
@@ -158,7 +235,10 @@ export default function AppContent() {
       </aside>
 
       {/* Main Area */}
+      {/* MAIN VIEW AREA */}
       <main className="flex-grow flex flex-col overflow-hidden relative">
+        
+        {/* ADMIN RESTRICTED ALERT BANNER */}
         {isImpersonating && (
           <div className="bg-amber-500 text-sidebar px-6 py-2 flex items-center justify-between shadow-lg z-40 relative">
              <div className="flex items-center gap-3">
@@ -168,6 +248,7 @@ export default function AppContent() {
              <p className="text-[9px] font-bold italic opacity-80">Sensitive data like account balance is automatically redacted for security.</p>
           </div>
         )}
+        {/* MODAL: SUPPLIER KYB SETUP */}
         {showSetupModal && (
           <div className="absolute inset-0 bg-sidebar/80 backdrop-blur-sm z-[100] flex items-center justify-center p-6">
              <motion.div 
@@ -233,6 +314,7 @@ export default function AppContent() {
           </div>
         )}
 
+        {/* MODAL: CONSUMER KYC VERIFICATION */}
         {showConsumerVerifyModal && (
           <div className="absolute inset-0 bg-sidebar/80 backdrop-blur-sm z-[100] flex items-center justify-center p-6">
              <motion.div 
@@ -278,7 +360,103 @@ export default function AppContent() {
              </motion.div>
           </div>
         )}
-        {/* Header */}
+
+        {/* MODAL: NEW PRODUCT ENTRY (SUPPLIER ONLY) */}
+        {showAddProductModal && (
+          <div className="absolute inset-0 bg-sidebar/80 backdrop-blur-sm z-[110] flex items-center justify-center p-6 text-left">
+            <motion.div 
+               initial={{ scale: 0.9, opacity: 0 }}
+               animate={{ scale: 1, opacity: 1 }}
+               className="bg-white w-full max-w-lg rounded-2xl p-8 shadow-2xl space-y-6 overflow-y-auto max-h-[90vh]"
+            >
+               <div className="flex justify-between items-center">
+                  <h2 className="text-2xl font-black text-sidebar italic tracking-tighter uppercase leading-none">New Product Entry</h2>
+                  <button onClick={() => setShowAddProductModal(false)} className="p-2 hover:bg-slate-100 rounded-full">
+                     <X className="w-5 h-5" />
+                  </button>
+               </div>
+               
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
+                  <div className="space-y-2">
+                     <label className="text-[10px] font-bold uppercase tracking-widest text-brand-primary">Product Name</label>
+                     <input 
+                        type="text" 
+                        value={newProduct.name}
+                        onChange={(e) => setNewProduct({...newProduct, name: e.target.value})}
+                        placeholder="e.g. Inyange Milk" 
+                        className="w-full bg-bg border border-border-subtle p-3 rounded-lg text-xs font-bold outline-none focus:ring-1 focus:ring-brand-primary" 
+                     />
+                  </div>
+                  <div className="space-y-2">
+                     <label className="text-[10px] font-bold uppercase tracking-widest text-brand-primary">Category</label>
+                     <select 
+                        value={newProduct.category}
+                        onChange={(e) => setNewProduct({...newProduct, category: e.target.value as any})}
+                        className="w-full bg-bg border border-border-subtle p-3 rounded-lg text-xs font-bold outline-none focus:ring-1 focus:ring-brand-primary h-[42px]"
+                     >
+                        <option>Food</option>
+                        <option>Beverages</option>
+                        <option>Construction</option>
+                        <option>Fashion</option>
+                        <option>Home</option>
+                        <option>Tools</option>
+                        <option>Electronics</option>
+                     </select>
+                  </div>
+                  <div className="space-y-2">
+                     <label className="text-[10px] font-bold uppercase tracking-widest text-brand-primary">Price (RWF)</label>
+                     <input 
+                        type="number" 
+                        value={newProduct.price || ''}
+                        onChange={(e) => setNewProduct({...newProduct, price: Number(e.target.value)})}
+                        placeholder="0" 
+                        className="w-full bg-bg border border-border-subtle p-3 rounded-lg text-xs font-bold outline-none focus:ring-1 focus:ring-brand-primary text-brand-primary tabular-nums" 
+                     />
+                  </div>
+                  <div className="space-y-2">
+                     <label className="text-[10px] font-bold uppercase tracking-widest text-brand-primary">Stock Quantity</label>
+                     <input 
+                        type="number" 
+                        value={newProduct.stock || ''}
+                        onChange={(e) => setNewProduct({...newProduct, stock: Number(e.target.value)})}
+                        placeholder="0" 
+                        className="w-full bg-bg border border-border-subtle p-3 rounded-lg text-xs font-bold outline-none focus:ring-1 focus:ring-brand-primary tabular-nums" 
+                     />
+                  </div>
+               </div>
+
+               <div className="space-y-2 text-left">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-brand-primary">Description</label>
+                  <textarea 
+                     value={newProduct.description}
+                     onChange={(e) => setNewProduct({...newProduct, description: e.target.value})}
+                     rows={3} 
+                     placeholder="Tell buyers about your product..." 
+                     className="w-full bg-bg border border-border-subtle p-3 rounded-lg text-xs font-medium outline-none focus:ring-1 focus:ring-brand-primary"
+                  />
+               </div>
+
+               <div className="space-y-2 text-left">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-brand-primary">Product Image URL</label>
+                  <input 
+                     type="text" 
+                     value={newProduct.images?.[0]}
+                     onChange={(e) => setNewProduct({...newProduct, images: [e.target.value]})}
+                     placeholder="https://..." 
+                     className="w-full bg-bg border border-border-subtle p-3 rounded-lg text-xs font-mono outline-none focus:ring-1 focus:ring-brand-primary" 
+                  />
+               </div>
+
+               <button 
+                  onClick={handleAddProduct}
+                  className="w-full bg-sidebar text-white py-4 rounded-xl font-black text-sm uppercase tracking-widest hover:bg-brand-primary transition-all shadow-xl active:scale-95"
+               >
+                  Verify & Publish Entry
+               </button>
+            </motion.div>
+          </div>
+        )}
+        {/* GLOBAL HEADER */}
         <header className="h-15 bg-white border-b border-border-subtle flex items-center justify-between px-6 flex-shrink-0">
           <div className="flex items-center gap-3 text-text-main">
             <strong className="text-sm">Market Summary</strong>
@@ -286,6 +464,7 @@ export default function AppContent() {
           </div>
 
           <div className="flex items-center gap-6">
+            {/* Verification Status Badge */}
             <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 bg-bg border border-border-subtle rounded-full cursor-pointer hover:border-brand-primary transition-all group" onClick={() => setShowConsumerVerifyModal(true)}>
                <div className={`w-2 h-2 rounded-full ${consumerStatus === 'VERIFIED' ? 'bg-brand-success' : 'bg-brand-accent animate-pulse'}`} />
                <span className="text-[10px] font-black uppercase tracking-tight text-text-main">
@@ -294,11 +473,12 @@ export default function AppContent() {
                {consumerStatus === 'VERIFIED' && <ShieldCheck className="w-3 h-3 text-brand-success" />}
             </div>
 
+            {/* Global Search */}
             <div className="hidden md:flex relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted w-4 h-4" />
               <input 
                 type="text" 
-                placeholder="Search..." 
+                placeholder="Search products, suppliers, or logistics..." 
                 className="bg-bg border border-border-subtle rounded-md py-1.5 pl-9 pr-4 text-xs w-64 focus:ring-1 focus:ring-brand-primary outline-none transition-all"
               />
             </div>
@@ -330,6 +510,7 @@ export default function AppContent() {
           </div>
 
           <AnimatePresence mode="wait">
+            {/* VIEW: RETAIL / DAILY DEALS */}
             {activeTab === 'retail' && (
               <motion.div 
                 key="retail"
@@ -386,7 +567,7 @@ export default function AppContent() {
                      <span className="text-[10px] font-bold text-brand-primary cursor-pointer">VIEW ALL →</span>
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                    {MOCK_PRODUCTS.map((product) => (
+                    {products.map((product) => (
                       <ProductCard key={product.id} product={product} onClick={() => handleProductClick(product)} />
                     ))}
                   </div>
@@ -394,6 +575,7 @@ export default function AppContent() {
               </motion.div>
             )}
 
+            {/* VIEW: WHOLESALE MARKETPLACE */}
             {activeTab === 'marketplace' && (
               <motion.div 
                 key="marketplace"
@@ -418,13 +600,14 @@ export default function AppContent() {
 
                 {/* Grid */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                  {MOCK_PRODUCTS.map((product) => (
+                  {products.map((product) => (
                     <ProductCard key={product.id} product={product} onClick={() => handleProductClick(product)} />
                   ))}
                 </div>
               </motion.div>
             )}
 
+            {/* VIEW: SUPPLIER / ADMIN DASHBOARD */}
             {activeTab === 'dashboard' && (
               <motion.div 
                 key="dashboard"
@@ -456,6 +639,60 @@ export default function AppContent() {
                 <StatCard title="Account Balance" value="RWF 1.8M" subValue="MoMo Wallet" kind="neutral" isPrivate={isImpersonating} />
                 <StatCard title="MoMo Success Rate" value="98.2%" subValue="↑ Optimized Gateway" kind="up" />
                 <StatCard title="Active Artisans" value="42" subValue="Gikondo District" kind="neutral" />
+
+                {userRole === 'SUPPLIER' && (
+                   <div className="panel col-span-1 md:col-span-2 lg:col-span-4 bg-white border-l-4 border-l-brand-primary overflow-hidden">
+                      <div className="panel-header bg-slate-50/50">
+                         <div className="flex items-center gap-2">
+                            <div className="w-6 h-6 bg-brand-primary/10 text-brand-primary rounded-full flex items-center justify-center">
+                               <ShieldCheck className="w-3.5 h-3.5" />
+                            </div>
+                            <div className="panel-title text-brand-primary">AI Market Prediction & Demand Intelligence</div>
+                         </div>
+                         <span className="text-[10px] font-black uppercase text-text-muted bg-slate-100 px-2 py-0.5 rounded">Rwanda Nationwide Analysis</span>
+                      </div>
+                      <div className="p-4 grid grid-cols-1 lg:grid-cols-3 gap-6">
+                         {demandPredictions.map((pred, i) => (
+                            <div key={i} className="space-y-3 p-3 rounded-xl bg-slate-50 border border-slate-100 relative group hover:shadow-md transition-all">
+                               <div className="flex justify-between items-start">
+                                  <div>
+                                     <p className="text-[9px] font-black uppercase text-brand-primary tracking-widest">{pred.region}</p>
+                                     <p className="text-sm font-black text-sidebar italic tracking-tight">{pred.item}</p>
+                                  </div>
+                                  <div className={`px-2 py-0.5 rounded text-[8px] font-black uppercase ${pred.demand === 'CRITICAL GAP' ? 'bg-red-100 text-red-600 animate-pulse' : pred.demand === 'EXCESSIVE' ? 'bg-emerald-100 text-emerald-600' : 'bg-blue-100 text-blue-600'}`}>
+                                     {pred.demand}
+                                  </div>
+                               </div>
+                               <div className="space-y-1">
+                                  <p className="text-[10px] font-bold text-text-main flex items-center gap-1.5">
+                                     <MessageCircle className="w-3 h-3 text-slate-400" />
+                                     Sentiment based on Client Remarks:
+                                  </p>
+                                  <p className="text-[10px] text-text-muted italic bg-white p-2 rounded-lg border border-slate-100 shadow-sm leading-relaxed">
+                                     "{pred.remarks}"
+                                  </p>
+                                </div>
+                                <div className="flex items-center justify-between pt-1">
+                                   <div className="flex items-center gap-2">
+                                      <div className="w-20 h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                                         <div className="h-full bg-brand-primary" style={{ width: `${pred.confidence}%` }} />
+                                      </div>
+                                      <span className="text-[9px] font-bold text-text-muted">{pred.confidence}% Confidence</span>
+                                   </div>
+                                   <button className="text-[9px] font-black uppercase text-brand-primary hover:underline">Strategic Plan →</button>
+                                </div>
+                             </div>
+                          ))}
+                       </div>
+                       <div className="px-4 py-3 bg-brand-primary/5 border-t border-brand-primary/10 flex items-center justify-between">
+                          <p className="text-[9px] text-brand-primary font-bold italic flex items-center gap-2">
+                             <AlertTriangle className="w-3 h-3" />
+                             Updates hourly based on real-time ELMART transaction flow and logistics feedback.
+                          </p>
+                          <button className="text-[9px] font-black uppercase text-sidebar bg-white px-3 py-1 rounded shadow-sm border border-slate-200 hover:bg-slate-50">Generate Detailed Report</button>
+                       </div>
+                    </div>
+                 )}
 
                 <div className="panel col-span-1 md:col-span-2 lg:col-span-3">
                   <div className="panel-header">
@@ -561,7 +798,8 @@ export default function AppContent() {
             </motion.div>
           )}
 
-          {activeTab === 'product' && selectedProduct && (
+            {/* VIEW: PRODUCT DETAIL VIEW */}
+            {activeTab === 'product' && selectedProduct && (
               <motion.div 
                 key="product-detail"
                 initial={{ opacity: 0, x: 10 }}
@@ -572,6 +810,7 @@ export default function AppContent() {
               </motion.div>
             )}
 
+            {/* VIEW: AI MARKETING STUDIO */}
             {activeTab === 'ai-studio' && (
               <motion.div key="ai-studio" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
                 <div className="panel p-6 bg-sidebar text-white relative overflow-hidden">
@@ -593,7 +832,7 @@ export default function AppContent() {
                          <div>
                            <label className="text-[10px] font-bold uppercase text-text-muted mb-1 block">Select Product</label>
                            <select className="w-full bg-bg border border-border-subtle p-2 rounded text-xs font-bold outline-none focus:ring-1 focus:ring-brand-primary">
-                              {MOCK_PRODUCTS.map(p => <option key={p.id}>{p.name}</option>)}
+                              {products.map(p => <option key={p.id}>{p.name}</option>)}
                            </select>
                          </div>
                          <div>
@@ -606,15 +845,53 @@ export default function AppContent() {
                          </div>
                          <div>
                             <label className="text-[10px] font-bold uppercase text-text-muted mb-1 block">Voiceover Language</label>
-                            <select className="w-full bg-bg border border-border-subtle p-2 rounded text-xs">
-                               <option>Kinyarwanda</option>
-                               <option>English</option>
-                               <option>French</option>
-                            </select>
+                            <div className="flex gap-2">
+                               {['Kinyarwanda', 'English'].map(lang => (
+                                 <button 
+                                   key={lang}
+                                   onClick={() => setSelectedLanguage(lang)}
+                                   className={`flex-1 py-1.5 text-[9px] font-bold rounded border transition-all ${selectedLanguage === lang ? 'bg-brand-primary/10 border-brand-primary text-brand-primary font-black' : 'bg-bg border-border-subtle hover:border-slate-300'}`}
+                                 >
+                                   {lang}
+                                 </button>
+                               ))}
+                            </div>
                          </div>
-                         <button className="w-full bg-brand-primary text-white py-3 rounded-lg text-xs font-black uppercase tracking-widest hover:opacity-90 transition-all shadow-lg shadow-brand-primary/20">
-                           Initialize AI Production
-                         </button>
+                         <div className="pt-2">
+                            <button 
+                              onClick={() => {
+                                setIsAiGenerating(true);
+                                setAiProgress(0);
+                                const interval = setInterval(() => {
+                                  setAiProgress(p => {
+                                    if (p >= 100) {
+                                      clearInterval(interval);
+                                      setTimeout(() => {
+                                        setIsAiGenerating(false);
+                                        alert('AI Production Complete! Your localized video ad in ' + selectedLanguage + ' has been saved to your Media Studio.');
+                                      }, 800);
+                                      return 100;
+                                    }
+                                    return p + 10;
+                                  });
+                                }, 200);
+                              }}
+                              disabled={isAiGenerating}
+                              className={`w-full bg-brand-primary text-white py-3 rounded-lg text-xs font-black uppercase tracking-widest transition-all shadow-lg shadow-brand-primary/20 ${isAiGenerating ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-90 active:scale-95'}`}
+                            >
+                              {isAiGenerating ? `Producing... ${aiProgress}%` : 'Initialize AI Production'}
+                            </button>
+
+                            {isAiGenerating && (
+                              <div className="w-full h-1 bg-slate-100 rounded-full overflow-hidden mt-3">
+                                 <motion.div 
+                                   initial={{ width: 0 }}
+                                   animate={{ width: `${aiProgress}%` }}
+                                   className="h-full bg-brand-primary shadow-[0_0_10px_rgba(37,99,235,0.5)]" 
+                                 />
+                              </div>
+                            )}
+                         </div>
                       </div>
                     </div>
 
@@ -647,7 +924,7 @@ export default function AppContent() {
                           </div>
                        </div>
                        <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-[600px] overflow-y-auto">
-                          {MOCK_PRODUCTS.filter(p => p.promoVideoUrl).map(product => (
+                          {products.filter(p => p.promoVideoUrl).map(product => (
                             <div key={product.id} className="relative aspect-video bg-sidebar rounded-xl overflow-hidden group shadow-lg border border-white/5">
                                {/* Mock Video Element */}
                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent z-10" />
@@ -698,6 +975,7 @@ export default function AppContent() {
               </motion.div>
             )}
 
+            {/* VIEW: DOCUMENTATION REGISTRY */}
             {activeTab === 'documentation' && (
               <motion.div key="documentation" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
                  <div className="flex justify-between items-center">
@@ -758,6 +1036,7 @@ export default function AppContent() {
               </motion.div>
             )}
 
+            {/* VIEW: STOCK & INVENTORY INTELLIGENCE */}
             {activeTab === 'inventory' && (
               <motion.div key="inventory" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
                 <div className="flex justify-between items-center bg-white p-4 rounded-xl border border-border-subtle shadow-sm">
@@ -802,7 +1081,7 @@ export default function AppContent() {
                                   </tr>
                                </thead>
                                <tbody className="divide-y divide-slate-100">
-                                  {MOCK_PRODUCTS.slice(0, 8).map(p => (
+                                  {products.slice(0, 8).map(p => (
                                     <tr key={p.id} className="hover:bg-slate-50 transition-colors">
                                        <td className="px-4 py-4">
                                           <div className="flex flex-col">
@@ -891,11 +1170,17 @@ export default function AppContent() {
               </motion.div>
             )}
 
+            {/* VIEW: STOREFRONT EDITOR (MEDIA STUDIO) */}
             {activeTab === 'shop-manager' && (
               <motion.div key="shop-manager" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
                 <div className="flex justify-between items-center mb-4">
                   <h2 className="text-lg font-bold">Supplier Storefront Editor</h2>
-                  <button className="bg-brand-primary text-white px-4 py-2 rounded text-xs font-bold font-mono">+ New Entry</button>
+                  <button 
+                    onClick={() => setShowAddProductModal(true)}
+                    className="bg-brand-primary text-white px-4 py-2 rounded text-xs font-bold font-mono hover:bg-brand-primary/90 transition-all active:scale-95"
+                  >
+                    + New Entry
+                  </button>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -916,7 +1201,7 @@ export default function AppContent() {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 italic">
-                          {MOCK_PRODUCTS.map(p => (
+                          {products.map(p => (
                             <tr key={p.id} className="hover:bg-slate-50/50 transition-colors">
                               <td className="px-4 py-3 text-xs font-bold">{p.name}</td>
                               <td className="px-4 py-3">
@@ -1009,7 +1294,7 @@ export default function AppContent() {
 
       {/* Shared WhatsApp floating button */}
       <a 
-        href={isAdminMode ? "https://wa.me/250798582533" : "https://wa.me/250780000000"} 
+        href="https://wa.me/250798582533" 
         className="fixed bottom-6 right-6 bg-brand-success text-white p-3.5 rounded-full shadow-lg z-50 hover:scale-105 transition-transform flex items-center gap-2"
         target="_blank"
         rel="noopener noreferrer"
@@ -1023,6 +1308,10 @@ export default function AppContent() {
   );
 }
 
+/**
+ * HELPER COMPONENT: AdSection
+ * Rotates through featured advertisements.
+ */
 function AdSection({ advertisements }: { advertisements: Advertisement[] }) {
   const [current, setCurrent] = useState(0);
 
@@ -1072,6 +1361,10 @@ function AdSection({ advertisements }: { advertisements: Advertisement[] }) {
   );
 }
 
+/**
+ * HELPER COMPONENT: StatCard
+ * Displays a single metric with an optional private/redacted state for admins.
+ */
 function StatCard({ title, value, subValue, kind, isPrivate }: { title: string, value: string, subValue: string, kind: 'up' | 'neutral', isPrivate?: boolean }) {
   return (
     <div className={`stat-card relative overflow-hidden group ${isPrivate ? 'border-amber-500/20 shadow-amber-500/5' : ''}`}>
@@ -1094,61 +1387,10 @@ function StatCard({ title, value, subValue, kind, isPrivate }: { title: string, 
   );
 }
 
-function SecurityScreen({ onLogin }: { onLogin: () => void }) {
-  const [pin, setPin] = React.useState('');
-  
-  return (
-    <div className="fixed inset-0 bg-sidebar z-[200] flex items-center justify-center p-4">
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-sm bg-white/5 border border-white/10 rounded-2xl p-8 backdrop-blur-xl text-center space-y-8 shadow-2xl"
-      >
-        <div className="space-y-2">
-          <div className="w-16 h-16 bg-brand-accent/20 text-brand-accent rounded-full flex items-center justify-center mx-auto mb-4 border border-brand-accent/20">
-            <Lock className="w-8 h-8" />
-          </div>
-          <h2 className="text-2xl font-black text-white italic tracking-tighter uppercase">ELMART SECURE</h2>
-          <p className="text-xs text-slate-400 font-medium tracking-tight">Identity verified access strictly for ELMART Partners & Authorized Admins.</p>
-        </div>
-
-        <div className="space-y-4">
-           <div className="flex justify-center gap-3">
-              {[1, 2, 3, 4, 5, 6].map(i => (
-                <div key={i} className={`w-3 h-3 rounded-full border border-white/20 transition-all duration-300 ${pin.length >= i ? 'bg-brand-accent scale-110 shadow-[0_0_10px_rgba(245,158,11,0.5)]' : 'bg-white/5'}`} />
-              ))}
-           </div>
-           
-           <div className="grid grid-cols-3 gap-4 max-w-[240px] mx-auto">
-              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 'C', 0, '✓'].map(n => (
-                <button 
-                  key={n}
-                  onClick={() => {
-                    if (n === 'C') setPin('');
-                    else if (n === '✓') { if (pin.length >= 4) onLogin(); }
-                    else if (pin.length < 6) setPin(p => p + n);
-                  }}
-                  className="w-full aspect-square rounded-xl bg-white/5 border border-white/10 text-white font-black hover:bg-brand-accent hover:text-sidebar hover:scale-105 transition-all active:scale-95"
-                >
-                  {n}
-                </button>
-              ))}
-           </div>
-        </div>
-
-        <div className="pt-4 space-y-3">
-           <p className="text-[10px] text-slate-500 italic font-medium">Standard encryption active. All sessions are monitored.</p>
-           <div className="flex items-center justify-center gap-2 opacity-50 grayscale">
-              <img src="https://picsum.photos/seed/visa/40/25" className="h-4" />
-              <img src="https://picsum.photos/seed/mc/40/25" className="h-4" />
-              <img src="https://picsum.photos/seed/momo/40/25" className="h-4" />
-           </div>
-        </div>
-      </motion.div>
-    </div>
-  );
-}
-
+/**
+ * HELPER COMPONENT: ProductCard
+ * A display tile for products in the marketplace and retail grids.
+ */
 function ProductCard({ product, onClick }: { product: Product, onClick: () => void, [key: string]: any }) {
   return (
     <motion.div 
@@ -1206,6 +1448,10 @@ function ProductCard({ product, onClick }: { product: Product, onClick: () => vo
   );
 }
 
+/**
+ * HELPER COMPONENT: ProductDetail
+ * Detailed view of a single product with purchase options and AI promo playback.
+ */
 function ProductDetail({ product, userRole, onBack, onAddToCart }: { product: Product, userRole: UserRole, onBack: () => void, onAddToCart: () => void }) {
   const [activeImg, setActiveImg] = useState(0);
   const [purchaseType, setPurchaseType] = useState<'single' | 'bulk'>('single');
@@ -1373,6 +1619,10 @@ function ProductDetail({ product, userRole, onBack, onAddToCart }: { product: Pr
   );
 }
 
+/**
+ * HELPER COMPONENT: SecurePaymentGateway
+ * A multi-step payment portal supporting MoMo and Card payments with digital receipts.
+ */
 function SecurePaymentGateway({ amount, buyerType, onClose, onSuccess }: { amount: number, buyerType: 'SMALL_SCALE' | 'LARGE_SCALE', onClose: () => void, onSuccess: () => void }) {
    const [method, setMethod] = useState<'MOMO' | 'CARD'>('MOMO');
    const [step, setStep] = useState<'INIT' | 'PROCESSING' | 'SUCCESS'>('INIT');
