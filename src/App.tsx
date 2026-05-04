@@ -1,11 +1,10 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
+import { AdminStoreProvider } from './admin/useAdminStore';
 import AppContent from './AppContent';
 
 export default function App() {
-  return <AppContent />;
+  return (
+    <AdminStoreProvider>
+      <AppContent />
+    </AdminStoreProvider>
+  );
 }
-
