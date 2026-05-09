@@ -36,7 +36,8 @@ export type TabId =
   | 'artisan'
   | 'ai-studio'
   | 'shop-manager'
-  | 'documentation';
+  | 'documentation'
+  | 'contact';
 
 export interface NavTab {
   id: TabId | string;   // string allows admin-created custom tabs
@@ -84,6 +85,7 @@ const DEFAULT_NAV_TABS: NavTab[] = [
   { id: 'shop-manager',  label: 'Storefront Editor', icon: 'Layers',      roles: ['SUPPLIER','ADMIN'],                                  visible: true,  order: 8 },
   { id: 'documentation', label: 'Legal & Invoices',  icon: 'FileText',    roles: ['SUPPLIER','RETAIL_BUYER','WHOLESALE_BUYER','ADMIN'], visible: true,  order: 9 },
   { id: 'ai-studio',     label: 'AI Marketing',      icon: 'BarChart3',   roles: ['SUPPLIER','ADMIN'],                                  visible: true,  order: 10 },
+  { id: 'contact',       label: 'Contact Support',   icon: 'MessageCircle', roles: ['RETAIL_BUYER','WHOLESALE_BUYER','SUPPLIER','ADMIN'], visible: true,  order: 11 },
 ];
 
 const DEFAULT_SETTINGS: SiteSettings = {

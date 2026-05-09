@@ -10,10 +10,12 @@ import {
   UploadCloud, Plus, Lock, Menu, ChevronDown, ChevronUp,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { UserRole, VerificationStatus } from './types';
+import { UserRole, VerificationStatus, Product } from './types';
 import { MOCK_ORDERS } from './mockData';
 import { useBreakpoint } from './hooks/useBreakpoint';
 import { useAdminStore } from './admin/useAdminStore';
+import LogisticsView from './views/LogisticsView';
+import PaymentsView from './views/PaymentsView';
 
 // ── Views ──────────────────────────────────────────────────────────────────────
 import RetailView        from './views/RetailView';
@@ -23,12 +25,13 @@ import InventoryView     from './views/InventoryView';
 import DocumentationView from './views/DocumentationView';
 import AiStudioView      from './views/AiStudio';
 import ShopManagerView   from './views/ShopManagerView';
+import ArtisanPortalView from './views/ArtisanPortalView';
+import ContactView       from './views/ContactView';
 
 // ── Components ────────────────────────────────────────────────────────────────
 import AdSection       from './components/AdSection';
 import ProductDetail   from './components/ProductDetail';
 import { useAdminUnlock } from './admin/AdminPanel';
-import { Product }     from './types';
 
 // ─── Placeholder for unbuilt tabs ─────────────────────────────────────────────
 function PlaceholderView({ tab }: { tab: string }) {
@@ -43,6 +46,89 @@ function PlaceholderView({ tab }: { tab: string }) {
         <p className="font-black text-sm uppercase tracking-tight">{tab.replace('-', ' ')}</p>
         <p className="text-xs text-text-muted">Module loading...</p>
       </div>
+    </motion.div>
+  );
+}
+
+// ─── Search Results Overlay ────────────────────────────────────────────────────
+function SearchResultsOverlay({
+  query,
+  results,
+  onSelect,
+  onClose,
+}: {
+  query: string;
+  results: Product[];
+  onSelect: (p: Product) => void;
+  onClose: () => void;
+}) {
+  if (!query || query.trim().length < 2) return null;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -8 }}
+      transition={{ duration: 0.15 }}
+      className="absolute top-full left-0 right-0 mt-1 bg-white border border-border-subtle rounded-xl shadow-2xl z-[200] overflow-hidden"
+      style={{ maxHeight: '420px' }}
+    >
+      {/* Header */}
+      <div className="px-4 py-2.5 border-b border-border-subtle bg-slate-50/80 flex items-center justify-between">
+        <span className="text-[10px] font-black uppercase tracking-widest text-text-muted">
+          {results.length} result{results.length !== 1 ? 's' : ''} for "{query}"
+        </span>
+        <button onClick={onClose} className="p-1 hover:bg-slate-200 rounded-full transition-colors">
+          <X className="w-3 h-3 text-text-muted" />
+        </button>
+      </div>
+
+      {results.length === 0 ? (
+        <div className="px-4 py-8 text-center">
+          <p className="text-sm font-bold text-text-muted">No products found</p>
+          <p className="text-[10px] text-text-muted mt-1">Try searching by name, category or supplier</p>
+        </div>
+      ) : (
+        <div className="overflow-y-auto" style={{ maxHeight: '360px' }}>
+          {results.map((p) => (
+            <div
+              key={p.id}
+              onMouseDown={() => onSelect(p)}
+              className="flex items-center gap-3 px-4 py-3 hover:bg-sky-50 cursor-pointer border-b border-slate-50 last:border-0 transition-colors group"
+            >
+              <div className="w-11 h-11 rounded-lg overflow-hidden border border-border-subtle shrink-0 bg-slate-100">
+                <img
+                  src={p.images[0]}
+                  referrerPolicy="no-referrer"
+                  alt={p.name}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-black text-text-main truncate">{p.name}</p>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <span className="text-[9px] font-bold text-brand-primary uppercase">{p.category}</span>
+                  <span className="text-[9px] text-text-muted">· {p.supplierName}</span>
+                  {p.isArtisan && (
+                    <span className="text-[8px] font-black bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded uppercase">Artisan</span>
+                  )}
+                </div>
+              </div>
+              <div className="shrink-0 text-right">
+                <p className="text-xs font-black text-text-main">
+                  {(p.discountPrice || p.price).toLocaleString()} RWF
+                </p>
+                {p.discountPrice && (
+                  <p className="text-[9px] text-text-muted line-through">{p.price.toLocaleString()}</p>
+                )}
+              </div>
+              <div className="w-5 h-5 bg-brand-primary/10 rounded-full flex items-center justify-center shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                <span className="text-brand-primary text-[9px] font-black">→</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </motion.div>
   );
 }
@@ -69,7 +155,7 @@ export default function AppContent() {
   const { products, navTabs, siteSettings } = state;
 
   type TabId = 'retail' | 'marketplace' | 'dashboard' | 'product' | 'inventory' |
-               'logistics' | 'payments' | 'artisan' | 'ai-studio' | 'shop-manager' | 'documentation';
+               'logistics' | 'payments' | 'artisan' | 'ai-studio' | 'shop-manager' | 'documentation' | 'contact';
 
   const [activeTab, setActiveTab]           = useState<TabId>('marketplace');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -79,6 +165,60 @@ export default function AppContent() {
   const [sidebarOpen, setSidebarOpen]       = useState(false);
   const [headerExpanded, setHeaderExpanded] = useState(true);
   const [searchOpen, setSearchOpen]         = useState(false);
+
+  // ── Search state ──────────────────────────────────────────────────────────
+  const [searchQuery, setSearchQuery]           = useState('');
+  const [searchResults, setSearchResults]       = useState<Product[]>([]);
+  const [showSearchResults, setShowSearchResults] = useState(false);
+  const desktopSearchRef = useRef<HTMLDivElement>(null);
+  const mobileSearchRef  = useRef<HTMLDivElement>(null);
+
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+    if (query.trim().length < 2) {
+      setShowSearchResults(false);
+      setSearchResults([]);
+      return;
+    }
+    const q = query.toLowerCase();
+    const results = products.filter(p =>
+      p.stock !== -1 && (
+        p.name.toLowerCase().includes(q) ||
+        p.category.toLowerCase().includes(q) ||
+        p.supplierName.toLowerCase().includes(q) ||
+        (p.description && p.description.toLowerCase().includes(q))
+      )
+    );
+    setSearchResults(results);
+    setShowSearchResults(true);
+  };
+
+  const handleSelectProduct = (p: Product) => {
+    setSelectedProduct(p);
+    setActiveTab('product');
+    setSearchQuery('');
+    setSearchResults([]);
+    setShowSearchResults(false);
+    setSearchOpen(false);
+    setSidebarOpen(false);
+  };
+
+  const clearSearch = () => {
+    setSearchQuery('');
+    setSearchResults([]);
+    setShowSearchResults(false);
+  };
+
+  // Close search on outside click (desktop)
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (desktopSearchRef.current && !desktopSearchRef.current.contains(e.target as Node)) {
+        setShowSearchResults(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
 
   const [showSetupModal, setShowSetupModal]                   = useState(false);
   const [showConsumerVerifyModal, setShowConsumerVerifyModal] = useState(false);
@@ -294,8 +434,17 @@ export default function AppContent() {
         return <DocumentationView orders={MOCK_ORDERS} />;
 
       case 'logistics':
+        return <LogisticsView orders={MOCK_ORDERS} />;
+
       case 'payments':
+        return <PaymentsView orders={MOCK_ORDERS} isImpersonating={isImpersonating} />;
+
       case 'artisan':
+        return <ArtisanPortalView />;
+
+      case 'contact':
+        return <ContactView />;
+
       default:
         return <PlaceholderView tab={activeTab} />;
     }
@@ -508,16 +657,45 @@ export default function AppContent() {
             </div>
 
             <div className="flex items-center gap-1.5 md:gap-3">
+              {/* Mobile search toggle */}
               {isMobile && (
-                <button onClick={() => setSearchOpen(s => !s)} className="p-2 hover:bg-bg rounded-lg transition-colors">
+                <button onClick={() => { setSearchOpen(s => !s); if (searchOpen) clearSearch(); }} className="p-2 hover:bg-bg rounded-lg transition-colors">
                   <Search className="w-4 h-4 text-text-main" />
                 </button>
               )}
+
+              {/* Desktop search with dropdown */}
               {!isMobile && (
-                <div className="relative hidden sm:flex">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted w-3.5 h-3.5" />
-                  <input type="text" placeholder="Search products, suppliers..."
-                    className="bg-bg border border-border-subtle rounded-md py-1.5 pl-8 pr-3 text-xs w-48 lg:w-64 focus:ring-1 focus:ring-brand-primary outline-none transition-all" />
+                <div ref={desktopSearchRef} className="relative hidden sm:flex">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted w-3.5 h-3.5 pointer-events-none z-10" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    placeholder="Search products, suppliers..."
+                    onChange={e => handleSearch(e.target.value)}
+                    onFocus={() => searchQuery.length >= 2 && setShowSearchResults(true)}
+                    className="bg-bg border border-border-subtle rounded-md py-1.5 pl-8 pr-8 text-xs w-48 lg:w-72 focus:ring-1 focus:ring-brand-primary outline-none transition-all focus:w-80"
+                  />
+                  {searchQuery && (
+                    <button
+                      onClick={clearSearch}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 hover:bg-slate-200 rounded-full transition-colors"
+                    >
+                      <X className="w-3 h-3 text-text-muted" />
+                    </button>
+                  )}
+                  <AnimatePresence>
+                    {showSearchResults && (
+                      <div className="absolute top-full left-0 w-80 mt-1">
+                        <SearchResultsOverlay
+                          query={searchQuery}
+                          results={searchResults}
+                          onSelect={handleSelectProduct}
+                          onClose={clearSearch}
+                        />
+                      </div>
+                    )}
+                  </AnimatePresence>
                 </div>
               )}
 
@@ -561,14 +739,34 @@ export default function AppContent() {
                 exit={{ height: 0, opacity: 0 }}
                 className="overflow-hidden border-t border-border-subtle"
               >
-                <div className="px-3 py-2 relative">
-                  <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-text-muted w-3.5 h-3.5" />
-                  <input
-                    autoFocus
-                    type="text"
-                    placeholder="Search products, suppliers..."
-                    className="w-full bg-bg border border-border-subtle rounded-md py-2 pl-8 pr-3 text-xs focus:ring-1 focus:ring-brand-primary outline-none"
-                  />
+                <div ref={mobileSearchRef} className="px-3 py-2 space-y-1">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted w-3.5 h-3.5" />
+                    <input
+                      autoFocus
+                      type="text"
+                      value={searchQuery}
+                      placeholder="Search products, suppliers..."
+                      onChange={e => handleSearch(e.target.value)}
+                      className="w-full bg-bg border border-border-subtle rounded-md py-2 pl-8 pr-8 text-xs focus:ring-1 focus:ring-brand-primary outline-none"
+                    />
+                    {searchQuery && (
+                      <button onClick={clearSearch} className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 hover:bg-slate-200 rounded-full">
+                        <X className="w-3 h-3 text-text-muted" />
+                      </button>
+                    )}
+                  </div>
+                  {/* Mobile search results */}
+                  <AnimatePresence>
+                    {showSearchResults && (
+                      <SearchResultsOverlay
+                        query={searchQuery}
+                        results={searchResults}
+                        onSelect={handleSelectProduct}
+                        onClose={clearSearch}
+                      />
+                    )}
+                  </AnimatePresence>
                 </div>
               </motion.div>
             )}
