@@ -1,6 +1,6 @@
 /**
  * ContactView.tsx
- * Contact Support tab — loads the Visme animated contact form.
+ * Contact Support tab — loads the Visme animated contact form inline on page.
  */
 
 import { useEffect, useRef } from 'react';
@@ -104,22 +104,27 @@ export default function ContactView() {
         </a>
       </div>
 
-      {/* Visme animated contact form */}
+      {/* Visme animated contact form — scaled to fill width */}
       <div className="panel overflow-hidden">
         <div className="px-4 py-3 border-b border-border-subtle bg-slate-50/50 flex items-center gap-2">
           <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
           <span className="text-xs font-black uppercase tracking-tight">Send Us a Message</span>
         </div>
-        <div className="w-full min-h-[100vh]">
-          <div
-            className="visme_d"
-            data-title="Contact Form"
-            data-url="33po9z1q-contact-form?fullPage=true"
-            data-domain="forms"
-            data-full-page="true"
-            data-min-height="100vh"
-            data-form-id="179039"
-          />
+        <div style={{ width: '100%', minHeight: '750px', overflow: 'hidden' }}>
+          <div style={{
+            transform: 'scale(2.0)',
+            transformOrigin: 'top left',
+            width: '50%',
+            marginBottom: '380px'
+          }}>
+            <div
+              className="visme_d"
+              data-title="Contact Form"
+              data-url="33po9z1q-contact-form"
+              data-domain="forms"
+              data-form-id="179039"
+            />
+          </div>
         </div>
       </div>
 

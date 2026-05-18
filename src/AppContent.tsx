@@ -4,6 +4,8 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
+import CompareBar from './components/CompareBar';
+import { useCompare } from './hooks/useCompare';
 import {
   Search, ShoppingCart, User, BarChart3, Package,
   Layers, X, FileText, MessageCircle, ShieldCheck,
@@ -167,6 +169,7 @@ export default function AppContent() {
   const [searchOpen, setSearchOpen]         = useState(false);
 
   // ── Search state ──────────────────────────────────────────────────────────
+  const { compareIds, toggleCompare, clearCompare } = useCompare();
   const [searchQuery, setSearchQuery]           = useState('');
   const [searchResults, setSearchResults]       = useState<Product[]>([]);
   const [showSearchResults, setShowSearchResults] = useState(false);
@@ -389,12 +392,16 @@ export default function AppContent() {
 
       case 'product':
         return selectedProduct ? (
+          
           <ProductDetail
             product={selectedProduct}
+            allProducts={products}
             userRole={userRole}
             onBack={() => setActiveTab('marketplace')}
             onAddToCart={() => setCartCount(c => c + 1)}
+            onRelatedClick={(p) => { setSelectedProduct(p); setActiveTab('product'); }}
           />
+          
         ) : null;
 
       case 'dashboard':
@@ -831,6 +838,8 @@ export default function AppContent() {
           </nav>
         )}
       </main>
+
+   <CompareBar compareIds={compareIds} products={products} onRemove={toggleCompare} onClear={clearCompare} />   
     </div>
   );
 }

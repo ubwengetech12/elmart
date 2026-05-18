@@ -1,10 +1,15 @@
 /**
  * ProductCard.tsx
  * Product tile used in RetailView and MarketplaceView.
+ * Includes wishlist heart button and compare toggle.
+ * Both persist across page reloads via localStorage.
  */
 
 import { motion } from 'motion/react';
+import { Heart, BarChart2 } from 'lucide-react';
 import { Product } from '../types';
+import { useWishlist } from '../hooks/useWishlist';
+import { useCompare } from '../hooks/useCompare';
 
 interface ProductCardProps {
   product: Product;
@@ -12,6 +17,12 @@ interface ProductCardProps {
 }
 
 export default function ProductCard({ product, onClick }: ProductCardProps) {
+  const { isWishlisted, toggleWishlist } = useWishlist();
+  const { isComparing, toggleCompare, maxReached } = useCompare();
+
+  const wishlisted = isWishlisted(product.id);
+  const comparing  = isComparing(product.id);
+
   return (
     <motion.div
       whileHover={{ y: -2 }}
@@ -25,6 +36,39 @@ export default function ProductCard({ product, onClick }: ProductCardProps) {
           alt={product.name}
           className="w-full h-full object-cover"
         />
+
+        {/* Wishlist button */}
+        <button
+          onClick={e => { e.stopPropagation(); toggleWishlist(product.id); }}
+          className={`absolute top-2 right-2 w-7 h-7 rounded-full flex items-center justify-center shadow transition-all backdrop-blur-sm border ${
+            wishlisted
+              ? 'bg-rose-500 border-rose-400 text-white'
+              : 'bg-white/80 border-white/60 text-slate-400 hover:text-rose-500'
+          }`}
+          aria-label={wishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
+        >
+          <Heart className={`w-3.5 h-3.5 ${wishlisted ? 'fill-current' : ''}`} />
+        </button>
+
+        {/* Compare button */}
+        <button
+          onClick={e => {
+            e.stopPropagation();
+            if (!comparing && maxReached) return;
+            toggleCompare(product.id);
+          }}
+          className={`absolute top-10 right-2 w-7 h-7 rounded-full flex items-center justify-center shadow transition-all backdrop-blur-sm border ${
+            comparing
+              ? 'bg-brand-primary border-brand-primary text-white'
+              : maxReached
+              ? 'bg-white/50 border-white/40 text-slate-300 cursor-not-allowed'
+              : 'bg-white/80 border-white/60 text-slate-400 hover:text-brand-primary'
+          }`}
+          aria-label={comparing ? 'Remove from compare' : 'Add to compare'}
+        >
+          <BarChart2 className="w-3.5 h-3.5" />
+        </button>
+
         <div className="absolute top-2 left-2 flex flex-col gap-1">
           {product.isArtisan && (
             <span className="bg-brand-primary text-white text-[8px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider">
